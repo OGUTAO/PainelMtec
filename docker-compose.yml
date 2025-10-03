@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:13
+    container_name: pedidos-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "2025"
+      POSTGRES_DB: pedidos_db
+    volumes:
+      - pedidos_db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    # ======================================================================
+    # ADICIONADO: Healthcheck para garantir que o banco está pronto
+    # ======================================================================
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pedidos_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: flask-app
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy # <--- Alteração chave aqui
+    environment:
+      - FLASK_APP=crud.py
+      - FLASK_DEBUG=1
+      - DATABASE_URL=postgresql://postgres:2025@db:5432/pedidos_db
+
+volumes:
+  pedidos_db_data:

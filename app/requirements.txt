@@ -1,0 +1,6 @@
+pandas
+PySide6 
+numpy 
+watchdog
+psycopg2-binary
+openpyxl

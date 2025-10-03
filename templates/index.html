@@ -1,0 +1,479 @@
+{% extends "base.html" %}
+
+{% block title %}Painel de Pedidos{% endblock %}
+
+{% block head_styles %}
+<style>
+    .panel-header { border-bottom: 1px solid var(--dark-border); padding-bottom: 1.5rem; margin-bottom: 1.5rem; }
+    .panel-header h1 { font-weight: 600; }
+    .search-bar { background-color: var(--dark-card); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; }
+    .form-label { margin-bottom: 0.5rem; font-size: 0.875rem; color: var(--secondary-text); font-weight: 500; }
+    .nav-pills .nav-link { color: var(--secondary-text); font-weight: 500; }
+    .nav-pills .nav-link.active, .nav-pills .show>.nav-link { 
+        background-color: var(--primary-accent); 
+        color: white; 
+        box-shadow: 0 4px 15px -5px rgba(255, 102, 0, 0.6);
+    }
+    #pills-concluidos-tab.active { 
+        background-color: var(--bs-success) !important; 
+        box-shadow: 0 4px 15px -5px rgba(25, 135, 84, 0.6); 
+    }
+    #pills-cancelados-tab.active { 
+        background-color: var(--bs-danger) !important; 
+        box-shadow: 0 4px 15px -5px rgba(220, 53, 69, 0.6); 
+    }
+    .table-container { background-color: var(--dark-card); border-radius: 0.5rem; padding: 1rem; overflow-x: auto; }
+    .table { --bs-table-bg: transparent; border-color: var(--dark-border); }
+    .table thead th { background-color: #454545;; color: var(--light-text); font-weight: 600; border-bottom: 2px solid var(--primary-accent); }
+    .table tbody td { vertical-align: middle; color: var(--secondary-text); }
+    .table td, .table th { white-space: nowrap; }
+    .modal-content { background-color: var(--dark-card); border: 1px solid var(--dark-border); }
+    #pedidoHistorico ul { list-style-type: none; padding-left: 0; max-height: 200px; overflow-y: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center panel-header">
+    <h1 class="mb-0">Painel de Pedidos</h1>
+    <div class="d-flex gap-2">
+        <button class="btn btn-secondary" onclick="abrirModalReordenar()"><i class="fas fa-sort-numeric-down"></i> Reordenar Prioridades</button>
+        <button class="btn btn-primary" onclick="abrirAdicionarModal()"><i class="fas fa-plus"></i> Adicionar Novo Pedido</button>
+    </div>
+</div>
+
+<div class="search-bar">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label for="buscaTexto" class="form-label">Pesquisar por OP/PV</label>
+            <input type="text" id="buscaTexto" class="form-control" placeholder="Digite a OP ou PV...">
+        </div>
+        <div class="col-md-3">
+            <label for="buscaMes" class="form-label">Mês</label>
+            <select id="buscaMes" class="form-select">
+                <option value="">Todos</option>
+                <option value="1">Janeiro</option><option value="2">Fevereiro</option><option value="3">Março</option><option value="4">Abril</option><option value="5">Maio</option><option value="6">Junho</option><option value="7">Julho</option><option value="8">Agosto</option><option value="9">Setembro</option><option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="buscaAno" class="form-label">Ano</label>
+            <input type="text" id="buscaAno" class="form-control" placeholder="Ex: 2025" maxlength="4">
+        </div>
+    </div>
+</div>
+
+<ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+    <li class="nav-item" role="presentation"><button class="nav-link active" id="pills-andamento-tab" data-bs-toggle="pill" data-bs-target="#pills-andamento" type="button">Em Andamento</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" id="pills-concluidos-tab" data-bs-toggle="pill" data-bs-target="#pills-concluidos" type="button">Concluídos</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" id="pills-cancelados-tab" data-bs-toggle="pill" data-bs-target="#pills-cancelados" type="button">Cancelados</button></li>
+</ul>
+
+<div class="tab-content" id="pills-tabContent">
+    <div class="tab-pane fade show active" id="pills-andamento" role="tabpanel">
+        <div class="table-container">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>OP/PV</th> <th>Equipamento</th> <th>Qtd.</th> <th>Serviço</th> <th>Imagem</th> <th>Status</th> <th>Criado por</th> <th>Data Criação</th> <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPedidosAndamento"></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="pills-concluidos" role="tabpanel">
+        <div class="table-container">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>OP/PV</th> <th>Equipamento</th> <th>Qtd.</th> <th>Status</th> <th>Concluído por</th> <th>Data Criação</th><th>Data de Conclusão</th> <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPedidosConcluidos"></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="pills-cancelados" role="tabpanel">
+        <div class="table-container">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>OP/PV</th> <th>Equipamento</th> <th>Qtd.</th> <th>Status</th> <th>Cancelado por</th> <th>Data Criação</th><th>Data de Cancelamento</th> <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPedidosCancelados"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="adicionarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formAdicionarPedido">
+                <div class="modal-header"><h5 class="modal-title">Adicionar Novo Pedido</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3"> <label class="form-label">OP/PV</label> <input type="text" id="addPv" class="form-control" required> </div>
+                    <div class="mb-3"> <label class="form-label">Equipamento</label> <input type="text" id="addEquipamento" class="form-control" required> </div>
+                    <div class="mb-3"> <label class="form-label">Quantidade</label> <input type="number" id="addQuantidade" class="form-control" required> </div>
+                    <div class="mb-3"> <label class="form-label">Serviço</label> <input type="text" id="addServico" class="form-control" required> </div>
+                    <div class="mb-3"> <label class="form-label">Imagem</label> <select id="addImagemId" class="form-select" required></select> </div>
+                    <div class="mb-3"> <label class="form-label">Status</label> <select id="addStatusId" class="form-select" required></select> </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="addUrgente">
+                            <label class="form-check-label" for="addUrgente">Pedido Urgente</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="addOffice">
+                            <label class="form-check-label" for="addOffice">Inclui Office</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Adicionar</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editarModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="formEditarPedido">
+                <div class="modal-header"><h5 class="modal-title">Editar Pedido</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <input type="hidden" id="editId">
+                    <input type="hidden" id="editPrioridade">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3"> <label class="form-label">OP/PV</label> <input type="text" id="editPv" class="form-control" required> </div>
+                            <div class="mb-3"> <label class="form-label">Equipamento</label> <input type="text" id="editEquipamento" class="form-control" required> </div>
+                            <div class="mb-3"> <label class="form-label">Quantidade</label> <input type="number" id="editQuantidade" class="form-control" required> </div>
+                            <div class="mb-3"> <label class="form-label">Serviço</label> <input type="text" id="editServico" class="form-control" required> </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3"> <label class="form-label">Imagem</label> <select id="editImagemId" class="form-select" required></select> </div>
+                            <div class="mb-3"> <label class="form-label">Status</label> <select id="editStatusId" class="form-select" required></select> </div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <div class="form-check form-switch">
+                                   <input class="form-check-input" type="checkbox" role="switch" id="editUrgente">
+                                   <label class="form-check-label" for="editUrgente">Pedido Urgente</label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="editOffice">
+                                    <label class="form-check-label" for="editOffice">Inclui Office</label>
+                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="pedidoHistorico" class="mt-3 pt-2 border-top">
+                        <h6 class="text-white-50">Histórico de Status</h6>
+                        <ul id="listaHistorico" class="list-group"></ul>
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Salvar Alterações</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="reordenarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formReordenar">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reordenar Prioridade do Pedido</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="reordenarPedidoId" class="form-label">Selecione o Pedido (PV)</label>
+                        <select id="reordenarPedidoId" class="form-select" required>
+                            </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reordenarNovaPrioridade" class="form-label">Nova Posição na Prioridade</label>
+                        <input type="number" id="reordenarNovaPrioridade" class="form-control" required min="1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Reordenação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let listaStatus = [];
+    let listaImagem = [];
+    let pedidosEmAndamentoCache = [];
+
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), delay); };
+    }
+
+    function showToast(title, message) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.style.cssText = "width: 350px; background-color: var(--dark-card); color: var(--light-text); border: 1px solid var(--dark-border); border-radius: 0.5rem; padding: 1rem; box-shadow: 0 8px 25px rgba(0,0,0,0.3); animation: slideIn 0.3s ease-out; overflow: hidden; position: relative;";
+        toast.innerHTML = `<div style="display: flex; justify-content: space-between; align-items: center;"><strong>${title}</strong><button type="button" class="btn-close" style="filter: invert(1);" aria-label="Close"></button></div><div style="font-size: 0.9rem; color: var(--secondary-text);">${message}</div><div class="toast-progress" style="position: absolute; bottom: 0; left: 0; height: 4px; background-color: var(--primary-accent); animation: progress 7s linear forwards;"></div>`;
+        container.appendChild(toast);
+        const keyframes = `@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } } @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } } @keyframes progress { from { width: 100%; } to { width: 0%; } }`;
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = keyframes;
+        document.head.appendChild(styleSheet);
+
+        const removeToast = () => { toast.style.animation = "slideOut 0.3s ease-in forwards"; setTimeout(() => { toast.remove(); styleSheet.remove(); }, 300); };
+        toast.querySelector('.btn-close').addEventListener('click', removeToast);
+        setTimeout(removeToast, 7000);
+    }
+
+    async function carregarDropdowns() {
+        let respStatus = await fetch("/status");
+        listaStatus = await respStatus.json();
+        document.querySelectorAll("#editStatusId, #addStatusId").forEach(select => {
+            select.innerHTML = "";
+            listaStatus.forEach(status => { select.innerHTML += `<option value="${status.id}">${status.nome}</option>`; });
+        });
+        let respImagem = await fetch("/imagem");
+        listaImagem = await respImagem.json();
+        document.querySelectorAll("#editImagemId, #addImagemId").forEach(select => {
+            select.innerHTML = "";
+            listaImagem.forEach(imagem => { select.innerHTML += `<option value="${imagem.id}">${imagem.nome}</option>`; });
+        });
+    }
+
+    async function carregarPedidos(tipoFiltro, targetTbodyId) {
+        const buscaTexto = document.getElementById('buscaTexto').value;
+        const buscaMes = document.getElementById('buscaMes').value;
+        const buscaAno = document.getElementById('buscaAno').value;
+        const params = new URLSearchParams({ filtro: tipoFiltro, busca: buscaTexto, mes: buscaMes, ano: buscaAno });
+        const url = `/pedidos?${params.toString()}`;
+        let resp = await fetch(url);
+        let pedidos = await resp.json();
+        
+        if (tipoFiltro === 'andamento') {
+            pedidosEmAndamentoCache = pedidos;
+        }
+        
+        let tbody = document.getElementById(targetTbodyId);
+        tbody.innerHTML = "";
+
+        if (pedidos.length === 0) {
+            const colspan = (tipoFiltro === 'andamento') ? 9 : 8;
+            tbody.innerHTML = `<tr><td colspan="${colspan}" class="text-center py-4">Nenhum pedido encontrado.</td></tr>`;
+            return;
+        }
+
+        pedidos.forEach(p => {
+            const statusId = p.status_id ?? 'null';
+            const dataCriacao = p.data_criacao ? new Date(p.data_criacao).toLocaleString('pt-BR') : 'N/A';
+            const dataFinalizacao = p.data_conclusao ? new Date(p.data_conclusao).toLocaleString('pt-BR') : 'N/A';
+            let badgeClass = 'bg-dark';
+            switch (statusId) {
+                case 1: badgeClass = 'bg-secondary'; break;
+                case 2: badgeClass = 'bg-info text-dark'; break;
+                case 3: badgeClass = 'bg-primary'; break;
+                case 4: badgeClass = 'bg-success'; break;
+                case 5: badgeClass = 'bg-warning text-dark'; break;
+                case 6: badgeClass = 'bg-danger'; break;
+            }
+            const urgentIcon = p.urgente ? '<i class="fas fa-fire text-danger ms-2"></i>' : '';
+            let tr = document.createElement("tr");
+            let rowContent = '';
+            
+            if (tipoFiltro === 'andamento') {
+                const criadoPor = p.criado_por || p.perfil_alteracao || 'N/A'; // <--- ALTERE ESTA LINHA
+                rowContent = `<td>${p.pv}${urgentIcon}</td><td>${p.equipamento}</td><td>${p.quantidade}</td><td>${p.descricao_servico}</td><td>${p.imagem_nome ?? 'N/A'}</td><td><span class="badge ${badgeClass}">${p.status ?? 'N/A'}</span></td><td>${criadoPor}</td><td>${dataCriacao}</td>`;
+            } else {
+                const finalizadoPor = p.perfil_alteracao || 'N/A';
+                rowContent = `<td>${p.pv}${urgentIcon}</td><td>${p.equipamento}</td><td>${p.quantidade}</td><td><span class="badge ${badgeClass}">${p.status ?? 'N/A'}</span></td><td>${finalizadoPor}</td><td>${dataCriacao}</td><td>${dataFinalizacao}</td>`;
+            }
+            tr.innerHTML = rowContent + `<td class="d-flex gap-2"><button class="btn btn-outline-warning btn-sm" onclick="editarPedido(${p.id}, '${p.pv}', '${p.equipamento}', ${p.quantidade}, '${p.descricao_servico}', ${p.imagem_id ?? 'null'}, ${statusId}, ${p.urgente}, ${p.prioridade}, ${p.tem_office})"><i class="fas fa-pencil-alt"></i></button><button class="btn btn-outline-danger btn-sm" onclick="deletarPedido(${p.id})"><i class="fas fa-trash"></i></button></td>`;
+            tbody.appendChild(tr);
+        });
+    }
+    
+    async function editarPedido(id, pv, equipamento, quantidade, servico, imagemId, statusId, isUrgente, prioridade, hasOffice) {
+        document.getElementById("editId").value = id;
+        document.getElementById("editPv").value = pv;
+        document.getElementById("editEquipamento").value = equipamento;
+        document.getElementById("editQuantidade").value = quantidade;
+        document.getElementById("editServico").value = servico;
+        document.getElementById("editImagemId").value = imagemId;
+        document.getElementById("editStatusId").value = statusId;
+        document.getElementById("editUrgente").checked = isUrgente;
+        document.getElementById("editPrioridade").value = prioridade;
+        document.getElementById("editOffice").checked = hasOffice;
+
+        const listaHistorico = document.getElementById("listaHistorico");
+        listaHistorico.innerHTML = '<li>Carregando histórico...</li>';
+        
+        try {
+            let resp = await fetch(`/pedidos/${id}/historico`);
+            if (!resp.ok) throw new Error('Falha ao buscar histórico');
+            let historico = await resp.json();
+            listaHistorico.innerHTML = "";
+            if (historico.length > 0) {
+                historico.forEach(item => {
+                    const data = new Date(item.data_mudanca).toLocaleString('pt-BR');
+                    listaHistorico.innerHTML += `<li class="list-group-item">De <strong>${item.nome_status_anterior}</strong> para <strong>${item.nome_status_alterado}</strong><br><small class="text-white-50">${data} por ${item.alterado_por}</small></li>`;
+                });
+            } else {
+                listaHistorico.innerHTML = '<li class="list-group-item">Nenhum histórico de alteração de status encontrado.</li>';
+            }
+        } catch (error) {
+            listaHistorico.innerHTML = '<li class="list-group-item text-danger">Erro ao carregar histórico.</li>';
+            console.error(error);
+        }
+        
+        let modal = new bootstrap.Modal(document.getElementById("editarModal"));
+        modal.show();
+    }
+
+    async function deletarPedido(id) {
+        if (confirm("Deseja realmente excluir este pedido?")) {
+            await fetch(`/pedidos/${id}`, { method: "DELETE" });
+            triggerSearch();
+        }
+    }
+
+    function abrirAdicionarModal() {
+        document.getElementById("formAdicionarPedido").reset();
+        let modal = new bootstrap.Modal(document.getElementById("adicionarModal"));
+        modal.show();
+    }
+    
+    async function abrirModalReordenar() {
+        const selectPedido = document.getElementById('reordenarPedidoId');
+        selectPedido.innerHTML = '<option value="">Carregando pedidos...</option>';
+
+        if (pedidosEmAndamentoCache.length === 0) {
+            await carregarPedidos('andamento', 'tabelaPedidosAndamento');
+        }
+
+        selectPedido.innerHTML = '<option value="">Selecione um pedido</option>';
+        pedidosEmAndamentoCache.forEach(pedido => {
+            selectPedido.innerHTML += `<option value="${pedido.id}">${pedido.pv} (Prioridade Atual: ${pedido.prioridade})</option>`;
+        });
+
+        document.getElementById("formReordenar").reset();
+        let modal = new bootstrap.Modal(document.getElementById("reordenarModal"));
+        modal.show();
+    }
+
+    function triggerSearch() {
+        const activeTab = document.querySelector('.nav-pills .nav-link.active');
+        if (activeTab.id === 'pills-andamento-tab') {
+            carregarPedidos('andamento', 'tabelaPedidosAndamento');
+        } else if (activeTab.id === 'pills-concluidos-tab') {
+            carregarPedidos('concluido', 'tabelaPedidosConcluidos');
+        } else if (activeTab.id === 'pills-cancelados-tab') {
+            carregarPedidos('cancelado', 'tabelaPedidosCancelados');
+        }
+    }
+
+    document.getElementById("formAdicionarPedido").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const formData = {
+            pv: document.getElementById("addPv").value,
+            equipamento: document.getElementById("addEquipamento").value,
+            quantidade: document.getElementById("addQuantidade").value,
+            descricao_servico: document.getElementById("addServico").value,
+            imagem_id: document.getElementById("addImagemId").value,
+            status_id: document.getElementById("addStatusId").value,
+            urgente: document.getElementById("addUrgente").checked,
+            tem_office: document.getElementById("addOffice").checked
+        };
+        await fetch("/pedidos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
+        bootstrap.Modal.getInstance(document.getElementById("adicionarModal")).hide();
+        triggerSearch();
+    });
+
+    document.getElementById("formEditarPedido").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const id = document.getElementById("editId").value;
+        const pv = document.getElementById("editPv").value;
+        const equipamento = document.getElementById("editEquipamento").value;
+        const novoStatusId = document.getElementById("editStatusId").value;
+
+        const formData = {
+            pv: pv,
+            equipamento: equipamento,
+            quantidade: document.getElementById("editQuantidade").value,
+            descricao_servico: document.getElementById("editServico").value,
+            status_id: novoStatusId,
+            imagem_id: document.getElementById("editImagemId").value,
+            urgente: document.getElementById("editUrgente").checked,
+            prioridade: document.getElementById("editPrioridade").value,
+            tem_office: document.getElementById("editOffice").checked
+        };
+        
+        await fetch(`/pedidos/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(formData) });
+        bootstrap.Modal.getInstance(document.getElementById("editarModal")).hide();
+
+        if (novoStatusId === '4') {
+            showToast('<i class="fas fa-check-circle text-success me-2"></i>Pedido Concluído', `O pedido <strong>${pv}</strong> (${equipamento}) foi finalizado.`);
+        } else if (novoStatusId === '6') {
+            showToast('<i class="fas fa-times-circle text-danger me-2"></i>Pedido Cancelado', `O pedido <strong>${pv}</strong> (${equipamento}) foi cancelado.`);
+        }
+
+        triggerSearch();
+    });
+
+    document.getElementById("formReordenar").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const pedidoId = document.getElementById("reordenarPedidoId").value;
+        const novaPrioridade = document.getElementById("reordenarNovaPrioridade").value;
+
+        if (!pedidoId || !novaPrioridade) {
+            alert("Por favor, selecione um pedido e defina a nova prioridade.");
+            return;
+        }
+
+        const formData = {
+            pedido_id: parseInt(pedidoId),
+            nova_prioridade: parseInt(novaPrioridade)
+        };
+
+        const response = await fetch("/api/reordenar-prioridade", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formData)
+        });
+
+        const result = await response.json();
+        bootstrap.Modal.getInstance(document.getElementById("reordenarModal")).hide();
+        
+        if(response.ok) {
+            showToast('<i class="fas fa-check-circle text-success me-2"></i>Sucesso', result.mensagem);
+        } else {
+            showToast('<i class="fas fa-times-circle text-danger me-2"></i>Erro', result.erro);
+        }
+        
+        triggerSearch();
+    });
+
+    document.getElementById('pills-andamento-tab').addEventListener('click', () => carregarPedidos('andamento', 'tabelaPedidosAndamento'));
+    document.getElementById('pills-concluidos-tab').addEventListener('click', () => carregarPedidos('concluido', 'tabelaPedidosConcluidos'));
+    document.getElementById('pills-cancelados-tab').addEventListener('click', () => carregarPedidos('cancelado', 'tabelaPedidosCancelados'));
+    
+    const buscaAnoInput = document.getElementById('buscaAno');
+    buscaAnoInput.addEventListener('input', function() { this.value = this.value.replace(/[^0-9]/g, ''); });
+    document.getElementById('buscaTexto').addEventListener('input', debounce(triggerSearch, 400));
+    document.getElementById('buscaMes').addEventListener('change', triggerSearch);
+    buscaAnoInput.addEventListener('input', debounce(triggerSearch, 400));
+    
+    document.addEventListener("DOMContentLoaded", async () => {
+        await carregarDropdowns();
+        carregarPedidos('andamento', 'tabelaPedidosAndamento');
+    });
+</script>
+{% endblock %}

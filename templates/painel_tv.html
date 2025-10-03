@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Produção MTEC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #1C1C1C;
+            --card-bg: #2E2E2E;
+            --border-color: #444;
+            --primary-orange: #FF6600;
+            --text-light: #E0E0E0;
+            --text-secondary: #AAAAAA;
+            --color-success: #2ECC71;
+            --color-danger: #E74C3C;
+            --office-color: #2D89EF;
+            /* Cores para os ícones de SO */
+            --windows-color: #00A4EF;
+            --linux-color: #FCC624;
+            --slui-color: #F25022;
+            --freedos-color: #8C8C8C;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 20px;
+            overflow: hidden;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            grid-template-rows: 1fr auto;
+            gap: 20px;
+            height: calc(100vh - 40px);
+        }
+        .grid-item {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .section-title {
+            color: var(--primary-orange);
+            font-weight: 700;
+            font-size: 1.2rem;
+            border-bottom: 2px solid var(--primary-orange);
+            padding-bottom: 8px;
+            margin: 0;
+        }
+        #col-prioridades { grid-column: 1 / 2; grid-row: 1 / 2; }
+        #col-listas-1 { grid-column: 2 / 3; grid-row: 1 / 2; }
+        #col-listas-2 { grid-column: 3 / 4; grid-row: 1 / 2; }
+        #col-concluidos { grid-column: 4 / 5; grid-row: 1 / 2; }
+        #col-dashboard { grid-column: 1 / 5; grid-row: 2 / 3; border-top: 1px solid var(--border-color); padding-top: 15px; }
+        .priority-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--primary-orange);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .priority-card h3 { margin: 0; font-size: 1.1rem; }
+        .priority-card p { margin: 5px 0; color: var(--text-secondary); font-size: 0.9rem; }
+        .card-footer { display: flex; justify-content: space-between; align-items: center; }
+        .card-footer-info { display: flex; align-items: center; gap: 8px; } /* Reduzido o gap geral */
+        .card-footer .maquinas { font-size: 1.8rem; font-weight: 700; }
+        .list-item { font-size: 0.95rem; }
+        .list-item .maquinas { color: var(--primary-orange); font-weight: 600; }
+        .list-more { color: var(--text-secondary); font-style: italic; margin-top: 10px; }
+        #col-concluidos .section-title { color: var(--color-success); border-color: var(--color-success); }
+        .side-column-section { display: flex; flex-direction: column; gap: 10px; }
+        .totals-box { margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border-color); font-size: 0.9rem; }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 20px; }
+        .metric-box h4 { font-size: 1.1rem; color: var(--text-light); }
+        .metric-box .value { font-size: 3rem; font-weight: 700; color: var(--primary-orange); line-height: 1; }
+        .metric-box .sub-value { font-size: 1rem; color: var(--text-secondary); }
+        .progress-bar-container { display: flex; flex-direction: column; gap: 5px; }
+        .progress-bar-label { font-size: 0.9rem; }
+        .progress-bar { background-color: var(--card-bg); border-radius: 5px; height: 20px; overflow: hidden; }
+        .progress-bar-fill { background-color: var(--primary-orange); height: 100%; width: 0%; transition: width 0.5s ease-in-out; }
+        .progress-bar-container.current-week .progress-bar-fill { background-color: #FFAA33; }
+        
+        .office-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--office-color);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .office-indicator .fa-windows {
+            font-size: 1.1rem;
+        }
+
+        .os-icon-container {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-right: 5px;
+        }
+        .os-icon {
+            font-size: 1.1rem;
+        }
+        .etq-icon {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            align-self: flex-start;
+        }
+        .windows-icon { color: var(--windows-color); }
+        .linux-icon { color: var(--linux-color); }
+        .slui-icon { color: var(--slui-color); }
+        .freedos-icon { color: var(--freedos-color); }
+
+        .info-separator {
+            color: var(--text-light);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid-container">
+        <div id="col-prioridades" class="grid-item">
+            <h2 class="section-title">PRIORIDADES</h2>
+            <div id="prioridades-container" class="grid-item"></div>
+        </div>
+        <div id="col-listas-1" class="grid-item">
+            <div class="side-column-section">
+                <h2 class="section-title">AGUARDANDO MONTAGEM</h2>
+                <div id="backlog-list"></div>
+                <p id="backlog-more" class="list-more"></p>
+            </div>
+            <div class="side-column-section">
+                <h2 class="section-title">EM MONTAGEM FORA DA PRIORIDADE</h2>
+                <div id="montagem-fora-list"></div>
+                <p id="montagem-fora-more" class="list-more"></p>
+            </div>
+        </div>
+        <div id="col-listas-2" class="grid-item">
+            <div class="side-column-section">
+                <h2 class="section-title">AGUARDANDO CHEGADA</h2>
+                <div id="aguardando-list"></div>
+                <p id="aguardando-more" class="list-more"></p>
+            </div>
+            <div class="side-column-section">
+                <h2 class="section-title">PENDENTES</h2>
+                <div id="pendentes-list"></div>
+                <p id="pendentes-more" class="list-more"></p>
+            </div>
+        </div>
+        <div id="col-concluidos" class="grid-item">
+            <div class="side-column-section">
+                <h2 class="section-title">ÚLTIMOS CONCLUÍDOS</h2>
+                <div id="concluidos-list"></div>
+                <div class="totals-box" id="concluidos-total"></div>
+            </div>
+            <div class="side-column-section">
+                <h2 class="section-title" style="color:var(--color-danger); border-color:var(--color-danger);">ÚLTIMOS CANCELADOS</h2>
+                <div id="cancelados-list"></div>
+                <div class="totals-box" id="cancelados-total"></div>
+            </div>
+        </div>
+        <div id="col-dashboard" class="grid-item">
+             <div class="dashboard-grid">
+                <div class="metric-box">
+                    <h4>Total Concluído no Mês</h4>
+                    <p class="value" id="metric-total-mes">0</p>
+                    <p class="sub-value" id="metric-total-mes-maq">0 máq.</p>
+                    <h4>Média Diária no Mês</h4>
+                    <p class="value" id="metric-media-dia">0.0</p>
+                    <p class="sub-value" id="metric-media-dia-maq">0.0 máq.</p>
+                </div>
+                <div class="metric-box">
+                    <h4 id="desempenho-title">Desempenho Semanal (Meta: 200 máq.)</h4>
+                    <div id="desempenho-container" class="progress-bar-container"></div>
+                </div>
+                <div class="metric-box">
+                    <h4>Recorde Diário no Mês</h4>
+                    <p class="value" id="metric-recorde-pedidos">0</p>
+                    <p class="sub-value" id="metric-recorde-maq">0 máq.</p>
+                    <p class="sub-value" id="metric-recorde-data">N/A</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/painel-tv-dados';
+        
+        function getOsIcon(osName) {
+            if (!osName) return '';
+            const lowerOsName = osName.toLowerCase();
+            let iconHtml = '', etqHtml = '';
+            if (lowerOsName.includes('w11')) {
+                iconHtml = '<i class="fa-brands fa-windows os-icon windows-icon" title="Windows"></i>';
+                if (lowerOsName.includes('etq')) {
+                    etqHtml = '<i class="fa-solid fa-tag etq-icon" title="Ativação por Etiqueta"></i>';
+                }
+            } else if (lowerOsName.includes('linux')) {
+                iconHtml = '<i class="fa-brands fa-linux os-icon linux-icon" title="Linux"></i>';
+            } else if (lowerOsName.includes('slui')) {
+                iconHtml = '<i class="fa-solid fa-key os-icon slui-icon" title="SLUI - Solução de Problemas de Ativação"></i>';
+            } else if (lowerOsName.includes('freedos')) {
+                iconHtml = '<i class="fa-solid fa-circle-question os-icon freedos-icon" title="FreeDOS (Sem SO Windows)"></i>';
+            }
+            return `<div class="os-icon-container">${iconHtml}${etqHtml}</div>`;
+        }
+
+        function renderPrioridades(prioridades) {
+            const container = document.getElementById('prioridades-container');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            if (Array.isArray(prioridades) && prioridades.length > 0) {
+                prioridades.forEach(p => {
+                    const prioridadeTexto = p.prioridade ? `(${p.prioridade}ª Prioridade)` : '';
+                    // ===== LÓGICA ATUALIZADA PARA ADICIONAR O TRAÇO =====
+                    const officeIndicator = p.tem_office ? `<span class="info-separator">-</span><span class="office-indicator" title="Inclui Office"><i class="fa-brands fa-windows"></i> Office</span>` : '';
+                    const osIcon = getOsIcon(p.nome_imagem);
+                    const urgentIcon = p.urgente ? `<i class="fa-solid fa-fire" style="color: var(--color-danger);" title="Urgente"></i>` : '';
+
+                    const card = `
+                        <div class="priority-card">
+                            <div>
+                                <h3>${urgentIcon} PV: ${p.pv} ${prioridadeTexto}</h3>
+                                <p><b>Status:</b> ${p.nome_status || 'N/A'}</p>
+                                <p><b>Equipamento:</b> ${p.equipamento || 'N/A'}</p>
+                                <p><b>Serviço:</b> ${p.descricao_servico || 'N/A'}</p>
+                            </div>
+                            <div class="card-footer">
+                                <div class="card-footer-info">
+                                    <span><b>Imagem:</b> ${osIcon} ${p.nome_imagem || 'N/A'}</span>
+                                    ${officeIndicator}
+                                </div>
+                                <span class="maquinas">${p.quantidade || 0} máq.</span>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += card;
+                });
+            } else {
+                container.innerHTML = '<p style="color: var(--text-secondary); text-align: center; margin-top: 20px;">Nenhum pedido na fila de prioridades.</p>';
+            }
+        }
+
+        // As outras funções JavaScript não precisam de alteração
+        function renderSimpleList(data, listId, moreId) {
+            const listContainer = document.getElementById(listId);
+            const moreContainer = document.getElementById(moreId);
+            if (!listContainer || !moreContainer) return;
+            
+            listContainer.innerHTML = '';
+            if (data && Array.isArray(data.lista) && data.lista.length > 0) {
+                data.lista.forEach(item => {
+                    listContainer.innerHTML += `<div class="list-item"><b>PV: ${item.pv}</b> (<span class="maquinas">${item.quantidade || 0} máq.</span>)</div>`;
+                });
+            }
+            
+            if (data && data.total > data.lista.length) {
+                moreContainer.textContent = `+${data.total - data.lista.length} pedidos...`;
+            } else {
+                moreContainer.textContent = '';
+            }
+        }
+
+        function renderSideList(data, listId, totalId, type) {
+            const listContainer = document.getElementById(listId);
+            const totalContainer = document.getElementById(totalId);
+            if (!listContainer || !totalContainer || !data) return;
+            
+            listContainer.innerHTML = '';
+            if (Array.isArray(data.lista) && data.lista.length > 0) {
+                data.lista.forEach(item => {
+                    const color = type === 'concluido' ? 'var(--color-success)' : 'var(--color-danger)';
+                    listContainer.innerHTML += `<div class="list-item"><b>PV: ${item.pv}</b> (<span class="maquinas" style="color:${color};">${item.quantidade || 0} máq.</span>)</div>`;
+                });
+            }
+            totalContainer.innerHTML = `<b>TOTAL DIA: ${data.total_pedidos || 0} (${data.total_maquinas || 0})</b>`;
+        }
+
+        function renderMetrics(metrics) {
+            if(!metrics) return;
+            document.getElementById('metric-total-mes').textContent = metrics.total_mes_pedidos || 0;
+            document.getElementById('metric-total-mes-maq').textContent = `${metrics.total_mes_maquinas || 0} máq.`;
+            document.getElementById('metric-media-dia').textContent = metrics.media_diaria_pedidos || 0.0;
+            document.getElementById('metric-media-dia-maq').textContent = `${metrics.media_diaria_maquinas || 0.0} máq.`;
+            document.getElementById('metric-recorde-pedidos').textContent = metrics.recorde_dia_pedidos || 0;
+            document.getElementById('metric-recorde-maq').textContent = `${metrics.recorde_dia_maquinas || 0} máq.`;
+            document.getElementById('metric-recorde-data').textContent = metrics.recorde_dia_data || 'N/A';
+        }
+
+        function renderDesempenho(desempenho, meta) {
+            const container = document.getElementById('desempenho-container');
+            if (!container) return;
+            container.innerHTML = '';
+            document.getElementById('desempenho-title').textContent = `Desempenho Semanal (Meta: ${meta} máq.)`;
+
+            if (Array.isArray(desempenho) && desempenho.length > 0) {
+                const hoje = new Date();
+                const diaDaSemana = hoje.getDay();
+                const diff = hoje.getDate() - diaDaSemana + (diaDaSemana === 0 ? -6 : 1);
+                const inicioSemanaAtual = new Date(hoje.setDate(diff)).toISOString().split('T')[0];
+
+                desempenho.forEach(semana => {
+                    const semanaObj = new Date(semana.semana + 'T12:00:00Z');
+                    if (isNaN(semanaObj.getTime())) return; 
+
+                    const fimSemana = new Date(semanaObj.getTime());
+                    fimSemana.setDate(semanaObj.getDate() + 6);
+                    
+                    const isCurrent = semana.semana === inicioSemanaAtual;
+
+                    const inicioFormatado = semanaObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+                    const fimFormatado = fimSemana.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+
+                    const percent = meta > 0 ? (semana.valor / meta) * 100 : 0;
+                    
+                    let labelTexto = `Semana ${inicioFormatado} a ${fimFormatado}: <b>${semana.valor}</b>`;
+                    if (isCurrent) {
+                        labelTexto = `▶ ${labelTexto}`;
+                    }
+
+                    const itemHTML = `
+                        <div class="progress-bar-container ${isCurrent ? 'current-week' : ''}">
+                            <div class="progress-bar-label">${labelTexto}</div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" style="width: ${Math.min(percent, 100)}%;"></div>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += itemHTML;
+                });
+            }
+        }
+
+        async function atualizarPainel() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) {
+                    throw new Error(`Erro na API: ${response.statusText}`);
+                }
+                const data = await response.json();
+                
+                if (data && !data.error) {
+                    renderPrioridades(data.prioridades);
+                    renderSimpleList(data.backlog, 'backlog-list', 'backlog-more');
+                    renderSimpleList(data.aguardando, 'aguardando-list', 'aguardando-more');
+                    renderSimpleList(data.pendentes, 'pendentes-list', 'pendentes-more');
+                    renderSimpleList(data.em_montagem_fora_prioridade, 'montagem-fora-list', 'montagem-fora-more');
+                    renderSideList(data.concluidos_hoje, 'concluidos-list', 'concluidos-total', 'concluido');
+                    renderSideList(data.cancelados_hoje, 'cancelados-list', 'cancelados-total', 'cancelado');
+                    renderMetrics(data.metricas);
+                    renderDesempenho(data.desempenho_semanal, data.meta_semanal);
+                }
+
+            } catch (error) {
+                console.error("Falha ao atualizar o painel:", error);
+                document.body.innerHTML = `<div style="text-align:center; padding-top: 20vh; font-size: 2rem; color: var(--color-danger);">Erro ao carregar dados do painel. Verifique a conexão e o backend.</div>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            atualizarPainel();
+            setInterval(atualizarPainel, 10000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - Painel Prioridades</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --dark-bg: #282828;
+            --dark-card: #3C3C3C;
+            --dark-border: #505050;
+            --primary-accent: #ff6600;
+            --light-text: #FFFFFF;
+            --secondary-text: #B0B0B0;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--light-text);
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 400px;
+            padding: 2.5rem;
+            margin: auto;
+            background-color: var(--dark-card);
+            border-radius: 0.75rem;
+            border: 1px solid var(--dark-border);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .login-container .form-control {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+        }
+        
+        .login-container .form-control:focus {
+            border-color: var(--primary-accent);
+            box-shadow: 0 0 0 0.25rem rgba(255, 102, 0, 0.25); 
+        }
+
+        .login-header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .login-header h2 {
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+        
+        .btn-primary {
+            --bs-btn-bg: var(--primary-accent);
+            --bs-btn-border-color: var(--primary-accent);
+            --bs-btn-hover-bg: #e65c00;
+            --bs-btn-hover-border-color: #e65c00;
+        }
+
+        .login-footer {
+            margin-top: 3rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--secondary-text);
+        }
+
+        .login-footer p {
+            margin-bottom: 0.25rem;
+        }
+        
+        .alert-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            z-index: 1050;
+        }
+
+        /* ===== NOVOS ESTILOS PARA O ÍCONE DE VER SENHA ===== */
+        .password-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .password-wrapper .form-control {
+            padding-right: 40px; /* Espaço para o ícone */
+        }
+        .password-wrapper #togglePassword {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: var(--secondary-text);
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="alert-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="login-container">
+        <div class="login-header">
+            <img src="{{ url_for('static', filename='logoMtec.jpeg') }}" alt="Logo MTEC" style="height: 60px; border-radius: 8px;">
+            <h2>Painel Prioridades</h2>
+            <h4 class="text-secondary">Acesso Restrito</h4>
+        </div>
+
+        <form method="POST">
+            <div class="form-floating mb-3">
+                <input type="text" name="username" class="form-control" id="floatingInput" placeholder="Usuário" required autofocus>
+                <label for="floatingInput">Usuário</label>
+            </div>
+            
+            <div class="form-floating password-wrapper">
+                <input type="password" name="password" class="form-control" id="floatingPassword" placeholder="Senha" required>
+                <label for="floatingPassword">Senha</label>
+                <i class="fas fa-eye" id="togglePassword"></i>
+            </div>
+            
+            <button class="w-100 btn btn-lg btn-primary mt-4" type="submit">Entrar</button>
+        </form>
+
+        <footer class="login-footer">
+            <p>&copy; Mtec 2025 </p>
+            <p>Developed by Luiz S., Anderson V. & Vitor B.</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Script para fechar alertas automaticamente
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const alerts = document.querySelectorAll('.alert-dismissible');
+            alerts.forEach(function(alert) {
+                setTimeout(function() {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 3000);
+            });
+        });
+
+        // ===== NOVO SCRIPT PARA MOSTRAR/OCULTAR SENHA =====
+        const togglePassword = document.querySelector('#togglePassword');
+        const passwordInput = document.querySelector('#floatingPassword');
+
+        togglePassword.addEventListener('click', function () {
+            // Verifica o tipo do input
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // Alterna o ícone
+            this.classList.toggle('fa-eye');
+            this.classList.toggle('fa-eye-slash');
+        });
+    </script>
+</body>
+</html>

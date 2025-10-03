@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Gerador de Relatórios{% endblock %}
+
+{% block head_styles %}
+<style>
+    /* Estilos para a página de relatório */
+    .report-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        background-color: var(--dark-card);
+        padding: 2rem;
+        border-radius: 0.5rem;
+    }
+    .report-container h1 {
+        font-weight: 600;
+        border-bottom: 1px solid var(--dark-border);
+        padding-bottom: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .form-label {
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+        color: var(--secondary-text);
+        font-weight: 500;
+    }
+    /* ✅ ALTERAÇÃO: Estilo ajustado de 'textarea' para 'pre.form-control' */
+    pre.form-control {
+        width: 100%;
+        height: 350px;
+        white-space: pre-wrap; /* Mantém a formatação e permite quebra de linha */
+        font-family: monospace;
+        background-color: var(--dark-bg);
+        color: var(--light-text);
+        border: 1px solid var(--dark-border);
+        overflow-y: auto; /* Garante a barra de rolagem vertical */
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="report-container">
+    <h1>Gerador de Relatórios de Atividades</h1>
+    
+    <div class="row g-3 align-items-end mb-4">
+        <div class="col-md-4">
+            <label for="startDate" class="form-label">De:</label>
+            <input type="date" id="startDate" class="form-control">
+        </div>
+        
+        <div class="col-md-4">
+            <label for="endDate" class="form-label">Até:</label>
+            <input type="date" id="endDate" class="form-control">
+        </div>
+        
+        <div class="col-md-4">
+            <button id="gerarBtn" class="btn btn-primary w-100"><i class="fas fa-cogs"></i> Gerar Relatório</button>
+        </div>
+    </div>
+    
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">Relatório Gerado</h5>
+        <button id="copiarBtn" class="btn btn-success btn-sm" style="display:none;"><i class="fas fa-copy"></i> Copiar Texto</button>
+    </div>
+    <pre id="resultadoRelatorio" class="form-control"></pre>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Seta as datas iniciais para o dia de hoje.
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoje.getDate()).padStart(2, '0');
+        const hojeFormatado = `${ano}-${mes}-${dia}`;
+        
+        document.getElementById('startDate').value = hojeFormatado;
+        document.getElementById('endDate').value = hojeFormatado;
+
+        const gerarBtn = document.getElementById('gerarBtn');
+        const copiarBtn = document.getElementById('copiarBtn');
+        const resultadoEl = document.getElementById('resultadoRelatorio');
+
+        gerarBtn.addEventListener('click', async () => {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate || !endDate) {
+                // Usando um modal customizado em vez de alert() para melhor UX, se disponível.
+                // Se não, alert() é um fallback.
+                alert('Por favor, selecione as duas datas.');
+                return;
+            }
+
+            // ✅ ALTERAÇÃO: Usando .innerHTML para permitir que o navegador renderize o HTML
+            resultadoEl.innerHTML = "Gerando, por favor aguarde...";
+            gerarBtn.disabled = true;
+            gerarBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando...';
+
+            try {
+                const response = await fetch('/api/gerar-relatorio', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        start_date: startDate, 
+                        end_date: endDate 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // ✅ ALTERAÇÃO: Usando .innerHTML para exibir o relatório com formatação
+                    resultadoEl.innerHTML = data.relatorio;
+                    copiarBtn.style.display = 'block';
+                } else {
+                    // ✅ ALTERAÇÃO: Usando .innerHTML para exibir a mensagem de erro
+                    resultadoEl.innerHTML = `Erro ao gerar relatório: ${data.error}`;
+                    copiarBtn.style.display = 'none';
+                }
+            } catch (error) {
+                // ✅ ALTERAÇÃO: Usando .innerHTML para exibir a mensagem de erro
+                resultadoEl.innerHTML = `Erro de conexão com o servidor: ${error}`;
+                copiarBtn.style.display = 'none';
+            } finally {
+                gerarBtn.disabled = false;
+                gerarBtn.innerHTML = '<i class="fas fa-cogs"></i> Gerar Relatório';
+            }
+        });
+
+        copiarBtn.addEventListener('click', () => {
+            // ✅ ALTERAÇÃO: A linha .select() foi removida pois não funciona em <pre>
+            
+            // ✅ ALTERAÇÃO: Usando .innerText para copiar apenas o texto, sem as tags HTML
+            navigator.clipboard.writeText(resultadoEl.innerText).then(() => {
+                copiarBtn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+                setTimeout(() => {
+                    copiarBtn.innerHTML = '<i class="fas fa-copy"></i> Copiar Texto';
+                }, 2000);
+            });
+        });
+    });
+</script>
+{% endblock %}

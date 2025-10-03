@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Usuários - Painel MTEC{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2">Gerenciamento de Usuários</h1>
+        <button id="btnAdicionarUsuario" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalUsuario">
+            <i class="fas fa-plus-circle me-2"></i>Adicionar Novo Usuário
+        </button>
+    </div>
+
+    <div class="card" style="background-color: var(--dark-card); border-color: var(--dark-border);">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" style="color: var(--light-text);">
+                    <thead>
+                        <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Username</th>
+                            <th scope="col">Nome Completo</th>
+                            <th scope="col">Nível de Acesso</th>
+                            <th scope="col">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-usuarios-corpo">
+                        <!-- Linhas serão inseridas aqui via JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Adicionar/Editar Usuário -->
+<div class="modal fade" id="modalUsuario" tabindex="-1" aria-labelledby="modalUsuarioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background-color: var(--dark-card);">
+            <form id="formUsuario">
+                <div class="modal-header" style="border-color: var(--dark-border);">
+                    <h5 class="modal-title" id="modalUsuarioLabel">Adicionar Novo Usuário</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="alerta-modal-usuario" class="alert alert-danger d-none" role="alert"></div>
+                    
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nomeCompleto" class="form-label">Nome Completo</label>
+                        <input type="text" class="form-control" id="nomeCompleto" name="nome_completo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Senha</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirmar Senha</label>
+                        <input type="password" class="form-control" id="confirmPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nivelAcesso" class="form-label">Nível de Acesso</label>
+                        <select class="form-select" id="nivelAcesso" name="nivel_acesso" required>
+                            <option value="operador" selected>Operador</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-color: var(--dark-border);">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Usuário</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Variável global para guardar o ID do usuário que está sendo editado
+let editandoUsuarioId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    carregarUsuarios();
+
+    const formUsuario = document.getElementById('formUsuario');
+    const modalUsuario = document.getElementById('modalUsuario');
+    const modalLabel = document.getElementById('modalUsuarioLabel');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const btnAdicionarUsuario = document.getElementById('btnAdicionarUsuario');
+
+    // Abre o modal para ADICIONAR um novo usuário
+    btnAdicionarUsuario.addEventListener('click', function() {
+        editandoUsuarioId = null; // Garante que não estamos em modo de edição
+        formUsuario.reset();
+        modalLabel.textContent = 'Adicionar Novo Usuário';
+        usernameInput.disabled = false; // Permite editar o username
+        // Torna os campos de senha obrigatórios para novos usuários
+        passwordInput.required = true;
+        passwordInput.placeholder = "";
+        confirmPasswordInput.required = true;
+    });
+
+    // Lógica para salvar (seja adição ou edição)
+    formUsuario.addEventListener('submit', function(event) {
+        event.preventDefault();
+        salvarUsuario();
+    });
+
+    // Limpa o formulário e reseta o ID de edição quando o modal for fechado
+    modalUsuario.addEventListener('hidden.bs.modal', function () {
+        formUsuario.reset();
+        document.getElementById('alerta-modal-usuario').classList.add('d-none');
+        editandoUsuarioId = null; 
+    });
+});
+
+async function salvarUsuario() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const alerta = document.getElementById('alerta-modal-usuario');
+
+    // Validação de senha: obrigatória ao criar, opcional ao editar
+    if (password || (editandoUsuarioId === null)) { 
+        if (password !== confirmPassword) {
+            alerta.textContent = 'As senhas não coincidem.';
+            alerta.classList.remove('d-none');
+            return;
+        }
+    }
+    
+    const formData = new FormData(document.getElementById('formUsuario'));
+    const data = Object.fromEntries(formData.entries());
+
+    // Se a senha estiver vazia durante a edição, não a envie para o backend
+    if (editandoUsuarioId && !data.password) {
+        delete data.password;
+    }
+    
+    const url = editandoUsuarioId ? `/api/usuarios/${editandoUsuarioId}` : '/api/usuarios';
+    const method = editandoUsuarioId ? 'PUT' : 'POST';
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            alerta.textContent = result.erro || 'Ocorreu um erro.';
+            alerta.classList.remove('d-none');
+        } else {
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('modalUsuario'));
+            modalInstance.hide();
+            showToast(result.mensagem, 'success');
+            carregarUsuarios();
+        }
+    } catch (error) {
+        console.error('Erro ao salvar usuário:', error);
+        alerta.textContent = 'Ocorreu um erro inesperado. Tente novamente.';
+        alerta.classList.remove('d-none');
+    }
+}
+
+async function carregarUsuarios() {
+    try {
+        const response = await fetch('/api/usuarios');
+        if (!response.ok) throw new Error('Falha ao carregar usuários');
+        const usuarios = await response.json();
+        
+        const corpoTabela = document.getElementById('tabela-usuarios-corpo');
+        corpoTabela.innerHTML = ''; 
+
+        if (usuarios.length === 0) {
+            corpoTabela.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum usuário encontrado.</td></tr>';
+            return;
+        }
+
+        // Pega o username logado da sessão do Flask para a verificação de segurança
+        const usuarioLogado = "{{ session['username'] }}"; 
+
+        usuarios.forEach(usuario => {
+            // Desabilita botões se a linha for do usuário logado
+            const isUsuarioLogado = usuario.username === usuarioLogado;
+            const disabledAttr = isUsuarioLogado ? 'disabled' : '';
+            const titleAttr = isUsuarioLogado ? 'title="Não é possível alterar o usuário logado"' : '';
+
+            const linha = `
+                <tr>
+                    <td>${usuario.id}</td>
+                    <td>${usuario.username}</td>
+                    <td>${usuario.nome_completo}</td>
+                    <td><span class="badge ${usuario.nivel_acesso === 'admin' ? 'bg-primary' : 'bg-secondary'}">${usuario.nivel_acesso}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-warning me-2" onclick="abrirModalEdicao(${usuario.id}, '${usuario.username}', '${usuario.nome_completo}', '${usuario.nivel_acesso}')" ${disabledAttr} ${titleAttr}>
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="excluirUsuario(${usuario.id}, '${usuario.username}')" ${disabledAttr} ${titleAttr}>
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            corpoTabela.innerHTML += linha;
+        });
+    } catch (error) {
+        console.error('Erro:', error);
+        document.getElementById('tabela-usuarios-corpo').innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro ao carregar os dados.</td></tr>`;
+    }
+}
+
+function abrirModalEdicao(id, username, nomeCompleto, nivelAcesso) {
+    editandoUsuarioId = id; // Define o ID para o modo de edição
+
+    const modal = new bootstrap.Modal(document.getElementById('modalUsuario'));
+    document.getElementById('modalUsuarioLabel').textContent = `Editar Usuário: ${username}`;
+    
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+
+    // Preenche o formulário com os dados do usuário
+    usernameInput.value = username;
+    usernameInput.disabled = true; // Impede a edição do username
+    document.getElementById('nomeCompleto').value = nomeCompleto;
+    document.getElementById('nivelAcesso').value = nivelAcesso;
+
+    // Lida com a senha: não é obrigatória na edição
+    passwordInput.value = '';
+    confirmPasswordInput.value = '';
+    passwordInput.placeholder = "Deixe em branco para não alterar";
+    passwordInput.required = false;
+    confirmPasswordInput.required = false;
+    
+    modal.show();
+}
+
+function excluirUsuario(id, username) {
+    // Usamos um modal de confirmação para uma melhor experiência do usuário.
+    // Se você não tiver um modal de confirmação, pode usar `confirm()`
+    if (confirm(`Tem certeza que deseja excluir o usuário "${username}"? Esta ação não pode ser desfeita.`)) {
+        fetch(`/api/usuarios/${id}`, { method: 'DELETE' })
+        .then(response => response.json())
+        .then(result => {
+            if (result.erro) {
+                showToast(result.erro, 'danger');
+            } else {
+                showToast(result.mensagem, 'success');
+                carregarUsuarios(); // Recarrega a lista para remover o usuário
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao excluir:', error);
+            showToast('Ocorreu um erro ao tentar excluir o usuário.', 'danger');
+        });
+    }
+}
+
+// A função showToast deve existir no seu base.html
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        console.error('Elemento #toast-container não encontrado para exibir a notificação.');
+        return;
+    }
+    const toastId = 'toast-' + Date.now();
+    const toastHTML = `
+        <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">${message}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
+}
+</script>
+{% endblock %}
