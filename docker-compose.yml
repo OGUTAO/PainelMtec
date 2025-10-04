@@ -11,9 +11,6 @@ services:
       - pedidos_db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    # ======================================================================
-    # ADICIONADO: Healthcheck para garantir que o banco está pronto
-    # ======================================================================
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d pedidos_db"]
       interval: 5s
@@ -26,11 +23,12 @@ services:
     restart: always
     ports:
       - "5000:5000"
+    # --- A LINHA ABAIXO FOI RE-ADICIONADA ---
     volumes:
       - .:/app
     depends_on:
       db:
-        condition: service_healthy # <--- Alteração chave aqui
+        condition: service_healthy
     environment:
       - FLASK_APP=crud.py
       - FLASK_DEBUG=1

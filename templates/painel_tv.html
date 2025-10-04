@@ -177,7 +177,7 @@
                     <p class="sub-value" id="metric-media-dia-maq">0.0 máq.</p>
                 </div>
                 <div class="metric-box">
-                    <h4 id="desempenho-title">Desempenho Semanal (Meta: 200 máq.)</h4>
+                    <h4 id="desempenho-title">Desempenho Semanal</h4>
                     <div id="desempenho-container" class="progress-bar-container"></div>
                 </div>
                 <div class="metric-box">
@@ -299,7 +299,7 @@
             const container = document.getElementById('desempenho-container');
             if (!container) return;
             container.innerHTML = '';
-            document.getElementById('desempenho-title').textContent = `Desempenho Semanal (Meta: ${meta} máq.)`;
+            document.getElementById('desempenho-title').textContent = `Desempenho Semanal:`;
 
             if (Array.isArray(desempenho) && desempenho.length > 0) {
                 const hoje = new Date();
