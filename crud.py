@@ -149,11 +149,9 @@ def logout():
 def home(): return render_template("index.html")
 
 @app.route("/painel-tv")
-@login_required
 def painel_tv_page(): return render_template("painel_tv.html")
 
 @app.route("/api/painel-tv-dados")
-@login_required
 def painel_tv_api(): return jsonify(get_painel_data())
 
 @app.route("/usuarios")
